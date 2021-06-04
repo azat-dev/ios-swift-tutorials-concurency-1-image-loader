@@ -30,16 +30,20 @@ class ViewController: UICollectionViewController {
         }
         
         urls = photos.compactMap { URL(string: $0.download_url) }
-        collectionView.reloadData()
+        
+        DispatchQueue.main.async {
+            [weak self] in
+            self?.collectionView.reloadData()
+        }
     }
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        loadUrls()
+        DispatchQueue.global(qos: .utility).async {
+            self.loadUrls()
+        }
     }
-    
-    
 }
 
 extension ViewController {
@@ -47,22 +51,41 @@ extension ViewController {
         return urls.count
     }
     
+    private func downloadImageWithGlobalQueue(at indexPath: IndexPath) {
+        DispatchQueue.global(qos: .utility).async {
+            [weak self] in
+            
+            guard let url = self?.urls[indexPath.item] else  {
+                return
+            }
+            
+            guard let imageData = try? Data(contentsOf: url) else {
+                return
+            }
+            
+            DispatchQueue.main.async {
+                
+                let image = UIImage(data: imageData)
+                guard let cell = self?.collectionView.cellForItem(at: indexPath) as? PhotoCell else {
+                    return
+                }
+                
+                cell.imageView.image = image
+            }
+        }
+    }
+    
     override func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "Cell", for: indexPath) as? PhotoCell  else {
             fatalError("Can't dequeue the PhotoCell")
         }
         
-        let url = urls[indexPath.item]
-        
         cell.layer.borderWidth = 1
         cell.layer.borderColor = UIColor.black.cgColor
         
-        guard let imageData = try? Data(contentsOf: url)  else {
-            return cell
-        }
         
-        let image = UIImage(data: imageData)
-        cell.imageView.image = image
+        cell.imageView.image = nil
+        downloadImageWithGlobalQueue(at: indexPath)
         
         return cell
     }
