@@ -75,6 +75,26 @@ extension ViewController {
         }
     }
     
+    private func downloadImageWithUrlSession(at indexPath: IndexPath) {
+        let url = urls[indexPath.item]
+        
+        URLSession.shared.dataTask(with: url) {
+            [weak self] data, response, error in
+            
+            guard let data = data, let image = UIImage(data: data) else {
+                return
+            }
+            
+            DispatchQueue.main.async {
+                guard let cell = self?.collectionView.cellForItem(at: indexPath) as? PhotoCell else {
+                    return
+                }
+                
+                cell.imageView.image = image
+            }
+        }.resume()
+    }
+    
     override func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "Cell", for: indexPath) as? PhotoCell  else {
             fatalError("Can't dequeue the PhotoCell")
@@ -85,6 +105,7 @@ extension ViewController {
         
         
         cell.imageView.image = nil
+        //        downloadImageWithUrlSession(at: indexPath)
         downloadImageWithGlobalQueue(at: indexPath)
         
         return cell
